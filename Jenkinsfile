@@ -3,23 +3,6 @@ pipeline {
 
     stages {
 
-        // ✅ Start backend
-        stage('Start Backend') {
-            steps {
-                bat '''
-                cd C:\\Users\\JeanRafaelMalagi\\Documents\\workspace\\ecommerce-fullstack\\backend
-                start cmd /c npm install
-                start cmd /c npm run dev
-                '''
-            }
-        }
-
-        stage('Wait Backend') {
-            steps {
-                bat 'timeout /t 10'
-            }
-        }
-
         stage('Install Dependencies') {
             steps {
                 bat 'npm install'
