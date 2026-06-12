@@ -55,6 +55,7 @@ pipeline {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                             bat 'npx playwright test tests/dashboard'
+                        }
                     }
                 }
                 stage('Publish Report') {
