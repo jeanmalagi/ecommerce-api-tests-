@@ -28,11 +28,7 @@ pipeline {
                 stage('Auth Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat '''
-                            npx playwright test tests/auth ^
-                            --reporter=html ^
-                            --reporter=html=reports/auth
-                            '''
+                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\auth && npx playwright test tests/auth --reporter=html'
                         }
                     }
                 }
@@ -40,11 +36,7 @@ pipeline {
                 stage('Products Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat '''
-                            npx playwright test tests/products ^
-                            --reporter=html ^
-                            --reporter=html=reports/products
-                            '''
+                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\products && npx playwright test tests/products --reporter=html'
                         }
                     }
                 }
@@ -52,11 +44,7 @@ pipeline {
                 stage('Orders Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat '''
-                            npx playwright test tests/orders ^
-                            --reporter=html ^
-                            --reporter=html=reports/orders
-                            '''
+                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\orders && npx playwright test tests/orders --reporter=html'
                         }
                     }
                 }
@@ -64,11 +52,7 @@ pipeline {
                 stage('Cart Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat '''
-                            npx playwright test tests/cart ^
-                            --reporter=html ^
-                            --reporter=html=reports/cart
-                            '''
+                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\cart && npx playwright test tests/cart --reporter=html'
                         }
                     }
                 }
@@ -76,11 +60,7 @@ pipeline {
                 stage('Dashboard Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat '''
-                            npx playwright test tests/dashboard ^
-                            --reporter=html ^
-                            --reporter=html=reports/dashboard
-                            '''
+                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\dashboard && npx playwright test tests/dashboard --reporter=html'
                         }
                     }
                 }
@@ -89,7 +69,6 @@ pipeline {
 
         stage('Debug Reports') {
             steps {
-                bat 'echo ===== LISTANDO REPORTS ====='
                 bat 'dir reports /s'
             }
         }
