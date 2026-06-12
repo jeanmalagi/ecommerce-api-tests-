@@ -58,6 +58,18 @@ pipeline {
                         }
                     }
                 }
+                stage('Publish Report') {
+                    steps {
+                        publishHTML([
+                            reportDir: 'playwright-report',
+                            reportFiles: 'index.html',
+                            reportName: 'Playwright Test Report',
+                            allowMissing: true,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true
+                        ])
+                    }
+                }                
 
             }
         }
