@@ -22,7 +22,7 @@ pipeline {
                 stage('Auth Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/auth --reporter=line'
+                            bat 'npx playwright test tests/auth'
                         }
                     }
                 }
@@ -30,7 +30,7 @@ pipeline {
                 stage('Products Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/products --reporter=line'
+                            bat 'npx playwright test tests/products'
                         }
                     }
                 }
@@ -38,7 +38,7 @@ pipeline {
                 stage('Orders Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/orders --reporter=line'
+                            bat 'npx playwright test tests/orders'
                         }
                     }
                 }
@@ -46,7 +46,7 @@ pipeline {
                 stage('Cart Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/cart --reporter=line'
+                            bat 'npx playwright test tests/cart'
                         }
                     }
                 }
@@ -54,8 +54,7 @@ pipeline {
                 stage('Dashboard Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/dashboard --reporter=line'
-                        }
+                            bat 'npx playwright test tests/dashboard'
                     }
                 }
                 stage('Publish Report') {
