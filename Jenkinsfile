@@ -71,6 +71,7 @@ pipeline {
         stage('Generate Playwright Report') {
             steps {
                 bat 'npx playwright merge-reports --reporter html ./blob-report'
+                bat 'dir playwright-report'
             }
         }
 
@@ -78,12 +79,13 @@ pipeline {
         stage('Publish Report') {
             steps {
                 publishHTML([
-                    reportDir: 'playwright-report',
+                    reportDir: "${WORKSPACE}/playwright-report",
                     reportFiles: 'index.html',
                     reportName: 'Playwright Test Report',
                     keepAll: true,
                     alwaysLinkToLastBuild: true,
-                    allowMissing: false
+                    allowMissing: false,
+                    includes: '**/*'
                 ])
             }
         }
