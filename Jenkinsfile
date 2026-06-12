@@ -76,17 +76,9 @@ pipeline {
         }
 
         // ✅ Publicar relatório no Jenkins
-        stage('Publish Report') {
+        stage('Archive Report') {
             steps {
-                publishHTML([
-                    reportDir: "${WORKSPACE}/playwright-report",
-                    reportFiles: 'index.html',
-                    reportName: 'Playwright Test Report',
-                    keepAll: true,
-                    alwaysLinkToLastBuild: true,
-                    allowMissing: false,
-                    includes: '**/*'
-                ])
+                archiveArtifacts artifacts: 'playwright-report/**', fingerprint: true
             }
         }
     }
