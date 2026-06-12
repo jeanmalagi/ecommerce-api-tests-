@@ -22,7 +22,7 @@ pipeline {
                 stage('Auth Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/auth'
+                            bat 'npx playwright test tests/auth --reporter=blob'
                         }
                     }
                 }
@@ -30,7 +30,7 @@ pipeline {
                 stage('Products Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/products'
+                            bat 'npx playwright test tests/products --reporter=blob'
                         }
                     }
                 }
@@ -38,7 +38,7 @@ pipeline {
                 stage('Orders Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/orders'
+                            bat 'npx playwright test tests/orders --reporter=blob'
                         }
                     }
                 }
@@ -46,7 +46,7 @@ pipeline {
                 stage('Cart Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/cart'
+                            bat 'npx playwright test tests/cart --reporter=blob'
                         }
                     }
                 }
@@ -54,7 +54,7 @@ pipeline {
                 stage('Dashboard Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/dashboard'
+                            bat 'npx playwright test tests/dashboard --reporter=blob'
                         }
                     }
                 }
