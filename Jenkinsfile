@@ -1,21 +1,27 @@
 pipeline {
     agent any
 
+    options {
+        timeout(time: 20, unit: 'MINUTES')
+    }
+
     stages {
 
+        // ✅ Instalar dependências do projeto
         stage('Install Dependencies') {
             steps {
                 bat 'npm install'
             }
         }
 
+        // ✅ Instalar browsers do Playwright
         stage('Install Playwright Browsers') {
             steps {
                 bat 'npx playwright install'
             }
         }
 
-        // ✅ PARALLEL TEST EXECUTION
+        // ✅ Executar testes em paralelo usando blob reporter
         stage('API Tests (Parallel)') {
             parallel {
 
@@ -58,19 +64,27 @@ pipeline {
                         }
                     }
                 }
-                stage('Publish Report') {
-                    steps {
-                        publishHTML([
-                            reportDir: 'playwright-report',
-                            reportFiles: 'index.html',
-                            reportName: 'Playwright Test Report',
-                            allowMissing: true,
-                            alwaysLinkToLastBuild: true,
-                            keepAll: true
-                        ])
-                    }
-                }                
+            }
+        }
 
+        // ✅ Gerar relatório consolidado
+        stage('Generate Playwright Report') {
+            steps {
+                bat 'npx playwright merge-reports --reporter html ./blob-report'
+            }
+        }
+
+        // ✅ Publicar relatório no Jenkins
+        stage('Publish Report') {
+            steps {
+                publishHTML([
+                    reportDir: 'playwright-report',
+                    reportFiles: 'index.html',
+                    reportName: 'Playwright Test Report',
+                    keepAll: true,
+                    alwaysLinkToLastBuild: true,
+                    allowMissing: false
+                ])
             }
         }
     }
