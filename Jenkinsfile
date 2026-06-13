@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    options {
+        timeout(time: 20, unit: 'MINUTES')
+    }
+
     stages {
 
         stage('Install Dependencies') {
@@ -9,19 +13,13 @@ pipeline {
             }
         }
 
-        stage('Install Playwright') {
+        stage('Install Playwright Browsers') {
             steps {
                 bat 'npx playwright install'
             }
         }
 
-        stage('Clean Reports') {
-            steps {
-                bat 'if exist reports rmdir /s /q reports'
-                bat 'mkdir reports'
-            }
-        }
-
+        // ✅ Execução rápida paralela (sem gerar HTML aqui)
         stage('API Tests (Parallel)') {
             parallel {
 
@@ -67,19 +65,21 @@ pipeline {
             }
         }
 
-        // ✅ RELATÓRIO FINAL SIMPLES E FUNCIONAL
-        stage('Generate Report') {
+        // ✅ GERA RELATÓRIO CORRETO (UMA VEZ SÓ)
+        stage('Generate HTML Report') {
             steps {
                 bat 'npx playwright test --reporter=html'
             }
         }
 
+        // ✅ Debug simples
         stage('Debug Report') {
             steps {
                 bat 'dir playwright-report'
             }
         }
 
+        // ✅ Arquivar (sem fingerprint → evita bug Windows)
         stage('Archive Report') {
             steps {
                 archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
