@@ -92,8 +92,9 @@ pipeline {
         // ✅ Arquivar (sem fingerprint → evita bug Windows)
         stage('Archive Report') {
             steps {
-                archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
+                archiveArtifacts artifacts: 'playwright-report.zip', fingerprint: false
             }
         }
+
     }
 }
