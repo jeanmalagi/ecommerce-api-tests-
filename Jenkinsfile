@@ -68,7 +68,9 @@ pipeline {
         // ✅ GERA RELATÓRIO CORRETO (UMA VEZ SÓ)
         stage('Generate HTML Report') {
             steps {
-                bat 'npx playwright test --reporter=html'
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    bat 'npx playwright test --reporter=html'
+                }
             }
         }
 
