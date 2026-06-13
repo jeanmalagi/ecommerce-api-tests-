@@ -81,6 +81,14 @@ pipeline {
             }
         }
 
+        stage('Zip Report') {
+            steps {
+                powershell '''
+                Compress-Archive -Path playwright-report\\* -DestinationPath playwright-report.zip -Force
+                '''
+            }
+        }        
+
         // ✅ Arquivar (sem fingerprint → evita bug Windows)
         stage('Archive Report') {
             steps {
