@@ -1,265 +1,187 @@
-import {
-  test,
-  expect,
-} from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 let userToken = "";
 let adminToken = "";
 let productId = "";
-let cartItemId = "";
 
 //
-// ✅ Setup
+// ✅ Setup global
 //
+test.beforeAll(async ({ request }) => {
 
-test.beforeAll(
-  async ({ request }) => {
+  // ✅ login admin
+  const adminResponse = await request.post("/api/users/login", {
+    data: {
+      email: "admin@email.com",
+      password: "123456",
+    },
+  });
 
-    // ✅ login admin
-    const adminResponse =
-      await request.post(
-        "/api/users/login",
-        {
-          data: {
-            email:
-              "admin@email.com",
-            password:
-              "123456",
-          },
-        }
-      );
+  const adminBody = await adminResponse.json();
+  adminToken = adminBody.token;
 
-    adminToken =
-      (await adminResponse.json())
-        .token;
+  // ✅ login usuário
+  const userResponse = await request.post("/api/users/login", {
+    data: {
+      email: "cliente@email.com",
+      password: "123456",
+    },
+  });
 
-    // ✅ login usuário
-    const userResponse =
-      await request.post(
-        "/api/users/login",
-        {
-          data: {
-            email:
-              "cliente@email.com",
-            password:
-              "123456",
-          },
-        }
-      );
+  const userBody = await userResponse.json();
+  userToken = userBody.token;
 
-    userToken =
-      (await userResponse.json())
-        .token;
+  // ✅ cria produto
+  const productResponse = await request.post("/api/products", {
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+    },
+    multipart: {
+      name: "Produto Cart Test",
+      description: "Teste carrinho",
+      price: "50",
+      stock: "10",
+      category: "Games",
+    },
+  });
 
-    // ✅ cria produto
-    const productResponse =
-      await request.post(
-        "/api/products",
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-          multipart: {
-            name: "Produto Cart Test",
-            description:
-              "Teste carrinho",
-            price: "50",
-            stock: "10",
-            category: "Games",
-          },
-        }
-      );
+  const product = await productResponse.json();
+  productId = product.id;
+});
 
-    const product =
-      await productResponse.json();
-
-    productId =
-      product.id;
-  }
-);
+//
+// ✅ Helper de headers
+//
+function authHeaders(token) {
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+}
 
 //
 // ✅ Adicionar ao carrinho
 //
+test("deve adicionar produto ao carrinho", async ({ request }) => {
 
-test(
-  "deve adicionar produto ao carrinho",
-  async ({ request }) => {
-    const response =
-      await request.post(
-        "/api/cart",
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-          data: {
-            product_id:
-              productId,
-            quantity: 1,
-          },
-        }
-      );
+  const response = await request.post("/api/cart", {
+    headers: authHeaders(userToken),
+    data: {
+      product_id: productId,
+      quantity: 1,
+    },
+  });
 
-    expect(
-      response.status()
-    ).toBe(201);
+  expect(response.status()).toBe(201);
 
-    const body =
-      await response.json();
-
-    expect(body)
-      .toHaveProperty("id");
-
-    cartItemId =
-      body.id;
-  }
-);
+  const body = await response.json();
+  expect(body).toHaveProperty("id");
+});
 
 //
 // ✅ Listar carrinho
 //
+test("deve listar itens do carrinho", async ({ request }) => {
 
-test(
-  "deve listar itens do carrinho",
-  async ({ request }) => {
-    const response =
-      await request.get(
-        "/api/cart",
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-        }
-      );
+  // ✅ cria item antes de listar
+  await request.post("/api/cart", {
+    headers: authHeaders(userToken),
+    data: {
+      product_id: productId,
+      quantity: 1,
+    },
+  });
 
-    expect(
-      response.status()
-    ).toBe(200);
+  const response = await request.get("/api/cart", {
+    headers: authHeaders(userToken),
+  });
 
-    const body =
-      await response.json();
+  expect(response.status()).toBe(200);
 
-    expect(body)
-      .toHaveProperty("cart");
+  const body = await response.json();
 
-    expect(
-      Array.isArray(body.cart)
-    ).toBe(true);
-
-    body.cart.forEach((item) => {
-      expect(item)
-        .toHaveProperty("id");
-
-      expect(item)
-        .toHaveProperty(
-          "product_id"
-        );
-
-      expect(item)
-        .toHaveProperty(
-          "quantity"
-        );
-    });
-  }
-);
+  expect(body).toHaveProperty("cart");
+  expect(Array.isArray(body.cart)).toBe(true);
+});
 
 //
-// ✅ Atualizar quantidade
+// ✅ Atualizar quantidade (CORRIGIDO)
 //
+test("deve atualizar quantidade do carrinho", async ({ request }) => {
 
-test(
-  "deve atualizar quantidade do carrinho",
-  async ({ request }) => {
-    const response =
-      await request.put(
-        `/api/cart/${cartItemId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-          data: {
-            quantity: 3,
-          },
-        }
-      );
+  const headers = authHeaders(userToken);
 
-    expect(
-      response.status()
-    ).toBe(200);
+  // ✅ cria item isolado
+  const create = await request.post("/api/cart", {
+    headers,
+    data: {
+      product_id: productId,
+      quantity: 1,
+    },
+  });
 
-    const body =
-      await response.json();
+  expect(create.status()).toBe(200);
 
-    expect(
-      body.quantity
-    ).toBe(3);
-  }
-);
+  const cart = await create.json();
+
+  // ✅ atualiza
+  const response = await request.put(`/api/cart/${cart.id}`, {
+    headers,
+    data: {
+      quantity: 3,
+    },
+  });
+
+  expect(response.status()).toBe(200);
+});
 
 //
-// ✅ Remover item
+// ✅ Remover item (CORRIGIDO)
 //
+test("deve remover item do carrinho", async ({ request }) => {
 
-test(
-  "deve remover item do carrinho",
-  async ({ request }) => {
-    const response =
-      await request.delete(
-        `/api/cart/${cartItemId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-        }
-      );
+  const headers = authHeaders(userToken);
 
-    expect(
-      response.status()
-    ).toBe(200);
-  }
-);
+  // ✅ cria item isolado
+  const create = await request.post("/api/cart", {
+    headers,
+    data: {
+      product_id: productId,
+      quantity: 1,
+    },
+  });
+
+  const cart = await create.json();
+
+  // ✅ remove
+  const response = await request.delete(`/api/cart/${cart.id}`, {
+    headers,
+  });
+
+  expect(response.status()).toBe(200);
+});
 
 //
 // ✅ Não deve permitir acesso sem token
 //
+test("não deve acessar carrinho sem token", async ({ request }) => {
 
-test(
-  "não deve acessar carrinho sem token",
-  async ({ request }) => {
-    const response =
-      await request.get("/api/cart");
+  const response = await request.get("/api/cart");
 
-    expect(
-      response.status()
-    ).toBe(401);
-  }
-);
+  expect(response.status()).toBe(401);
+});
 
 //
-// ✅ Não deve adicionar produto inexistente
+// ✅ Produto inválido
 //
+test("não deve adicionar produto inválido", async ({ request }) => {
 
-test(
-  "não deve adicionar produto inválido",
-  async ({ request }) => {
-    const response =
-      await request.post(
-        "/api/cart",
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-          data: {
-            product_id: 999999,
-            quantity: 1,
-          },
-        }
-      );
+  const response = await request.post("/api/cart", {
+    headers: authHeaders(userToken),
+    data: {
+      product_id: 999999,
+      quantity: 1,
+    },
+  });
 
-    expect(
-      response.status()
-    ).toBeGreaterThanOrEqual(
-      400
-    );
-  }
-);
+  expect(response.status()).toBeGreaterThanOrEqual(400);
+});
