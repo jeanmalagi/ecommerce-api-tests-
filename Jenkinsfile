@@ -9,7 +9,7 @@ pipeline {
             }
         }
 
-        stage('Install Playwright Browsers') {
+        stage('Install Playwright') {
             steps {
                 bat 'npx playwright install'
             }
@@ -25,57 +25,64 @@ pipeline {
         stage('API Tests (Parallel)') {
             parallel {
 
-                stage('Auth Tests') {
+                stage('Auth') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\auth && npx playwright test --grep @auth --reporter=html'
+                            bat 'npx playwright test tests/auth --reporter=line'
                         }
                     }
                 }
 
-                stage('Products Tests') {
+                stage('Products') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\products && npx playwright test --grep @products --reporter=html'
+                            bat 'npx playwright test tests/products --reporter=line'
                         }
                     }
                 }
 
-                stage('Orders Tests') {
+                stage('Orders') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\orders && npx playwright test --grep @orders --reporter=html'
+                            bat 'npx playwright test tests/orders --reporter=line'
                         }
                     }
                 }
 
-                stage('Cart Tests') {
+                stage('Cart') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\cart && npx playwright test --grep @cart --reporter=html'
+                            bat 'npx playwright test tests/cart --reporter=line'
                         }
                     }
                 }
 
-                stage('Dashboard Tests') {
+                stage('Dashboard') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'set PLAYWRIGHT_HTML_OUTPUT_DIR=reports\\dashboard && npx playwright test --grep @dashboard --reporter=html'
+                            bat 'npx playwright test tests/dashboard --reporter=line'
                         }
                     }
                 }
             }
         }
 
-        stage('Debug Reports') {
+        // ✅ RELATÓRIO FINAL SIMPLES E FUNCIONAL
+        stage('Generate Report') {
             steps {
-                bat 'dir reports /s'
+                bat 'npx playwright test --reporter=html'
             }
         }
 
-        stage('Archive Reports') {
+        stage('Debug Report') {
             steps {
-                archiveArtifacts artifacts: 'reports/**', fingerprint: false
+                bat 'dir playwright-report'
+            }
+        }
+
+        stage('Archive Report') {
+            steps {
+                archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
             }
         }
     }
