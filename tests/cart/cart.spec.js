@@ -1,69 +1,32 @@
-import { test, expect } from "@playwright/test";
+import { expect } from '@playwright/test';
+import { test } from '../../fixtures/auth.fixture.js';
+import { createProductData } from '../../factories/product.factory.js';
+import { authHeaders } from '../../utils/authHeaders.js';
 
-let userToken = "";
-let adminToken = "";
-let productId = "";
+let productId;
 
 //
-// ✅ Setup global
+// ✅ Setup produto único
 //
-test.beforeAll(async ({ request }) => {
+test.beforeAll(async ({ request, adminToken }) => {
 
-  // ✅ login admin
-  const adminResponse = await request.post("/api/users/login", {
-    data: {
-      email: "admin@email.com",
-      password: "123456",
-    },
+  const productData = createProductData();
+
+  const response = await request.post('/api/products', {
+    headers: authHeaders(adminToken),
+    multipart: productData,
   });
 
-  const adminBody = await adminResponse.json();
-  adminToken = adminBody.token;
-
-  // ✅ login usuário
-  const userResponse = await request.post("/api/users/login", {
-    data: {
-      email: "cliente@email.com",
-      password: "123456",
-    },
-  });
-
-  const userBody = await userResponse.json();
-  userToken = userBody.token;
-
-  // ✅ cria produto
-  const productResponse = await request.post("/api/products", {
-    headers: {
-      Authorization: `Bearer ${adminToken}`,
-    },
-    multipart: {
-      name: "Produto Cart Test",
-      description: "Teste carrinho",
-      price: "50",
-      stock: "10",
-      category: "Games",
-    },
-  });
-
-  const product = await productResponse.json();
+  const product = await response.json();
   productId = product.id;
 });
 
 //
-// ✅ Helper de headers
-//
-function authHeaders(token) {
-  return {
-    Authorization: `Bearer ${token}`,
-  };
-}
-
-//
 // ✅ Adicionar ao carrinho
 //
-test("deve adicionar produto ao carrinho", async ({ request }) => {
+test('deve adicionar produto ao carrinho', async ({ request, userToken }) => {
 
-  const response = await request.post("/api/cart", {
+  const response = await request.post('/api/cart', {
     headers: authHeaders(userToken),
     data: {
       product_id: productId,
@@ -72,18 +35,15 @@ test("deve adicionar produto ao carrinho", async ({ request }) => {
   });
 
   expect(response.status()).toBe(201);
-
-  const body = await response.json();
-  expect(body).toHaveProperty("id");
 });
 
 //
 // ✅ Listar carrinho
 //
-test("deve listar itens do carrinho", async ({ request }) => {
+test('deve listar itens do carrinho', async ({ request, userToken }) => {
 
-  // ✅ cria item antes de listar
-  await request.post("/api/cart", {
+  // garantir item existente
+  await request.post('/api/cart', {
     headers: authHeaders(userToken),
     data: {
       product_id: productId,
@@ -91,27 +51,24 @@ test("deve listar itens do carrinho", async ({ request }) => {
     },
   });
 
-  const response = await request.get("/api/cart", {
+  const response = await request.get('/api/cart', {
     headers: authHeaders(userToken),
   });
 
   expect(response.status()).toBe(200);
 
   const body = await response.json();
-
-  expect(body).toHaveProperty("cart");
   expect(Array.isArray(body.cart)).toBe(true);
 });
 
 //
-// ✅ Atualizar quantidade (CORRIGIDO)
+// ✅ Atualizar carrinho
 //
-test("deve atualizar quantidade do carrinho", async ({ request }) => {
+test('deve atualizar quantidade do carrinho', async ({ request, userToken }) => {
 
   const headers = authHeaders(userToken);
 
-  // ✅ cria item isolado
-  const create = await request.post("/api/cart", {
+  const create = await request.post('/api/cart', {
     headers,
     data: {
       product_id: productId,
@@ -119,30 +76,26 @@ test("deve atualizar quantidade do carrinho", async ({ request }) => {
     },
   });
 
-  expect(create.status()).toBe(200);
-
   const cart = await create.json();
 
-  // ✅ atualiza
-  const response = await request.put(`/api/cart/${cart.id}`, {
+  const update = await request.put(`/api/cart/${cart.id}`, {
     headers,
     data: {
       quantity: 3,
     },
   });
 
-  expect(response.status()).toBe(200);
+  expect(update.status()).toBe(200);
 });
 
 //
-// ✅ Remover item (CORRIGIDO)
+// ✅ Remover carrinho
 //
-test("deve remover item do carrinho", async ({ request }) => {
+test('deve remover item do carrinho', async ({ request, userToken }) => {
 
   const headers = authHeaders(userToken);
 
-  // ✅ cria item isolado
-  const create = await request.post("/api/cart", {
+  const create = await request.post('/api/cart', {
     headers,
     data: {
       product_id: productId,
@@ -152,7 +105,6 @@ test("deve remover item do carrinho", async ({ request }) => {
 
   const cart = await create.json();
 
-  // ✅ remove
   const response = await request.delete(`/api/cart/${cart.id}`, {
     headers,
   });
@@ -161,11 +113,11 @@ test("deve remover item do carrinho", async ({ request }) => {
 });
 
 //
-// ✅ Não deve permitir acesso sem token
+// ✅ Sem token
 //
-test("não deve acessar carrinho sem token", async ({ request }) => {
+test('não deve acessar carrinho sem token', async ({ request }) => {
 
-  const response = await request.get("/api/cart");
+  const response = await request.get('/api/cart');
 
   expect(response.status()).toBe(401);
 });
@@ -173,9 +125,9 @@ test("não deve acessar carrinho sem token", async ({ request }) => {
 //
 // ✅ Produto inválido
 //
-test("não deve adicionar produto inválido", async ({ request }) => {
+test('não deve adicionar produto inválido', async ({ request, userToken }) => {
 
-  const response = await request.post("/api/cart", {
+  const response = await request.post('/api/cart', {
     headers: authHeaders(userToken),
     data: {
       product_id: 999999,

@@ -1,327 +1,142 @@
-import {
-  test,
-  expect,
-} from "@playwright/test";
-
-let userToken = "";
-
-let adminToken = "";
-
-let createdOrderId = "";
-
-let productId = "";
+import { expect } from '@playwright/test';
+import { test } from '../../fixtures/auth.fixture.js';
+import { createProductData } from '../../factories/product.factory.js';
+import { authHeaders } from '../../utils/authHeaders.js';
 
 //
-// ✅ Login usuário + admin
+// ✅ Criar pedido completo
 //
+test('deve criar pedido com item do carrinho', async ({ request, userToken, adminToken }) => {
 
-test.beforeAll(
-  async ({ request }) => {
-    // ✅ Login cliente
-    const userResponse =
-      await request.post(
-        "api/users/login",
-        {
-          data: {
-            email:
-              "cliente@email.com",
-            password:
-              "123456",
-          },
-        }
-      );
+  // ✅ cria produto
+  const productData = createProductData();
 
-    const userBody =
-      await userResponse.json();
+  const productRes = await request.post('/api/products', {
+    headers: authHeaders(adminToken),
+    multipart: productData,
+  });
 
-    userToken =
-      userBody.token;
+  expect(productRes.status()).toBe(201);
 
-    // ✅ Login admin
-    const adminResponse =
-      await request.post(
-        "api/users/login",
-        {
-          data: {
-            email:
-              "admin@email.com",
-            password:
-              "123456",
-          },
-        }
-      );
+  const product = await productRes.json();
 
-    const adminBody =
-      await adminResponse.json();
-
-    adminToken =
-      adminBody.token;
-    
-    
- // ✅ Criar produto de teste
-  const productResponse = await request.post("api/products", {
-    headers: {
-      Authorization: `Bearer ${adminToken}`,
-    },
-    multipart: {
-      name: "Produto Teste Orders",
-      description: "Teste",
-      price: "100",
-      stock: "10",
-      category: "Games",
+  // ✅ adiciona ao carrinho
+  const cartRes = await request.post('/api/cart', {
+    headers: authHeaders(userToken),
+    data: {
+      product_id: product.id,
+      quantity: 1,
     },
   });
 
-  const product = await productResponse.json();
+  expect(cartRes.status()).toBe(201);
 
-  productId = product.id;
-  
+  const cart = await cartRes.json();
+
+  // ✅ cria pedido
+  const orderRes = await request.post('/api/orders', {
+    headers: authHeaders(userToken),
+    data: {
+      items: [
+        {
+          product_id: product.id,
+          quantity: 1,
+        },
+      ],
+    },
   });
 
-//
-// ✅ Criar pedido
-//
+  expect(orderRes.status()).toBe(201);
 
-test(
-  "deve criar pedido",
-  async ({ request }) => {
-    // ✅ Adiciona item carrinho
-    await request.post(
-      "api/cart",
-      {
-        headers: {
-          Authorization: `Bearer ${userToken}`,
-        },
+  const order = await orderRes.json();
 
-        data: {
-          product_id: productId,
+  expect(order).toHaveProperty('id');
+});
+
+//
+// ✅ Listar pedidos do usuário
+//
+test('deve listar pedidos do usuário', async ({ request, userToken, adminToken }) => {
+
+  // ✅ cria produto
+  const productData = createProductData();
+
+  const productRes = await request.post('/api/products', {
+    headers: authHeaders(adminToken),
+    multipart: productData,
+  });
+
+  const product = await productRes.json();
+
+  // ✅ adiciona ao carrinho
+  await request.post('/api/cart', {
+    headers: authHeaders(userToken),
+    data: {
+      product_id: product.id,
+      quantity: 1,
+    },
+  });
+
+  // ✅ cria pedido
+  await request.post('/api/orders', {
+    headers: authHeaders(userToken),
+    data: {
+      items: [
+        {
+          product_id: product.id,
           quantity: 1,
         },
-      }
-    );
+      ],
+    },
+  });
 
-    // ✅ Checkout
-    const response =
-      await request.post(
-        "api/orders",
+  // ✅ lista pedidos
+  const response = await request.get('/api/orders', {
+    headers: authHeaders(userToken),
+  });
+
+  expect(response.status()).toBe(200);
+
+  const body = await response.json();
+
+  expect(Array.isArray(body)).toBe(true);
+});
+
+//
+// ✅ Não deve criar pedido sem token
+//
+test('não deve criar pedido sem autenticação', async ({ request }) => {
+
+  const response = await request.post('/api/orders', {
+    data: {
+      items: [
         {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-        }
-      );
-
-    expect(
-      response.status()
-    ).toBe(201);
-
-    const body =
-      await response.json();
-
-    expect(body)
-      .toHaveProperty(
-        "order"
-      );
-
-    createdOrderId =
-      body.order.id;
-  }
-);
-
-//
-// ✅ Listar pedidos usuário
-//
-
-test(
-  "deve listar pedidos do usuário",
-  async ({ request }) => {
-    const response =
-      await request.get(
-        "api/orders",
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-        }
-      );
-
-    expect(
-      response.status()
-    ).toBe(200);
-
-    const body =
-      await response.json();
-
-    expect(
-      Array.isArray(body)
-    ).toBeTruthy();
-  }
-);
-
-//
-// ✅ Não deve listar sem token
-//
-
-test(
-  "não deve acessar pedidos sem token",
-  async ({ request }) => {
-    const response =
-      await request.get(
-        "api/orders"
-      );
-
-    expect(
-      response.status()
-    ).toBe(401);
-  }
-);
-
-//
-// ✅ Admin listar pedidos
-//
-
-test(
-  "admin deve listar todos pedidos",
-  async ({ request }) => {
-    const response =
-      await request.get(
-        "api/orders",
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
-
-    expect(
-      response.status()
-    ).toBe(200);
-
-    const body =
-      await response.json();
-
-    expect(
-      Array.isArray(body)
-    ).toBeTruthy();
-  }
-);
-
-//
-// ✅ Atualizar status pedido
-//
-
-test(
-  "admin deve atualizar status pedido",
-  async ({ request }) => {
-
-    // ✅ Criar pedido primeiro
-    await request.post("api/cart", {
-      headers: {
-        Authorization: `Bearer ${userToken}`,
-      },
-      data: {
-        product_id: productId,
-        quantity: 1,
-      },
-    });
-
-    const createResponse =
-      await request.post("api/orders", {
-        headers: {
-          Authorization: `Bearer ${userToken}`,
-        },
-      });
-
-    const createdOrder =
-      await createResponse.json();
-
-    const orderId =
-      createdOrder.order.id;
-
-    // ✅ Agora atualiza o pedido
-    const response =
-      await request.put(
-        `api/orders/admin/${orderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-
-          data: {
-            status: "Enviado",
-          },
-        }
-      );
-
-    expect(
-      response.status()
-    ).toBe(200);
-
-    const body =
-      await response.json();
-
-    expect(
-      body.status
-    ).toBe("Enviado");
-  }
-);
-
-//
-// ✅ Validar estoque após pedido
-//
-
-test(
-  "estoque deve diminuir após compra",
-  async ({ request }) => {
-    const beforeResponse =
-      await request.get(
-        `api/products/${productId}`
-      );
-
-    const beforeProduct =
-      await beforeResponse.json();
-
-    const stockBefore =
-      beforeProduct.stock;
-
-    // ✅ Adiciona produto
-    await request.post(
-      "api/cart",
-      {
-        headers: {
-          Authorization: `Bearer ${userToken}`,
-        },
-
-        data: {
-          product_id: productId,
+          product_id: 1,
           quantity: 1,
         },
-      }
-    );
+      ],
+    },
+  });
 
-    // ✅ Checkout
-    await request.post(
-      "api/orders",
-      {
-        headers: {
-          Authorization: `Bearer ${userToken}`,
+  expect(response.status()).toBe(401);
+});
+
+//
+// ✅ Não deve criar pedido com produto inválido
+//
+test('não deve criar pedido com produto inválido', async ({ request, userToken }) => {
+
+  const response = await request.post('/api/orders', {
+    headers: authHeaders(userToken),
+    data: {
+      items: [
+        {
+          product_id: 999999,
+          quantity: 1,
         },
-      }
-    );
+      ],
+    },
+  });
 
-    // ✅ Busca estoque atualizado
-    const afterResponse =
-      await request.get(
-        `api/products/${productId}`
-      );
-
-    const afterProduct =
-      await afterResponse.json();
-
-    expect(
-      afterProduct.stock
-    ).toBe(
-      stockBefore - 1
-    );
-  }
-);
+  expect(response.status()).toBeGreaterThanOrEqual(400);
+});

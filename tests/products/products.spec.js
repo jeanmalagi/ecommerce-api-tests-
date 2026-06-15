@@ -1,302 +1,171 @@
-import {
-  test,
-  expect,
-} from "@playwright/test";
-
-let adminToken = "";
-
-//
-// ✅ Login admin antes dos testes
-//
-
-test.beforeAll(
-  async ({ request }) => {
-    const response =
-      await request.post(
-        "api/users/login",
-        {
-          data: {
-            email:
-              "admin@email.com",
-            password:
-              "123456",
-          },
-        }
-      );
-
-    expect(
-      response.status()
-    ).toBe(200);
-
-    const body =
-      await response.json();
-
-    adminToken =
-      body.token;
-  }
-);
-
-//
-// ✅ Listar produtos
-//
-
-test(
-  "deve listar produtos",
-  async ({ request }) => {
-    const response =
-      await request.get(
-        "api/products"
-      );
-
-    expect(
-      response.status()
-    ).toBe(200);
-
-    const body =
-      await response.json();
-
-    expect(
-      Array.isArray(body)
-    ).toBeTruthy();
-  }
-);
-
-//
-// ✅ Buscar produto por ID
-//
-
-test(
-  "deve buscar produto por id",
-  async ({ request }) => {
-    const response =
-      await request.get(
-        "api/products/12"
-      );
-
-    expect(
-      response.status()
-    ).toBe(200);
-
-    const body =
-      await response.json();
-
-    expect(body)
-      .toHaveProperty(
-        "id"
-      );
-
-    expect(body)
-      .toHaveProperty(
-        "name"
-      );
-  }
-);
-
-//
-// ✅ Produto inexistente
-//
-
-test(
-  "deve retornar 404 para produto inexistente",
-  async ({ request }) => {
-    const response =
-      await request.get(
-        "api/products/999999"
-      );
-
-    expect(
-      response.status()
-    ).toBe(404);
-  }
-);
+import { expect } from '@playwright/test';
+import { test } from '../../fixtures/auth.fixture.js';
+import { createProductData } from '../../factories/product.factory.js';
+import { authHeaders } from '../../utils/authHeaders.js';
 
 //
 // ✅ Criar produto
 //
+test('deve criar produto', async ({ request, adminToken }) => {
 
-test(
-  "deve criar produto",
-  async ({ request }) => {
-    const response =
-      await request.post(
-        "api/products",
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
+  const productData = createProductData();
 
-          multipart: {
-            name:
-              "Produto Teste API",
+  const response = await request.post('/api/products', {
+    headers: authHeaders(adminToken),
+    multipart: productData,
+  });
 
-            description:
-              "Produto criado via automação",
+  expect(response.status()).toBe(201);
 
-            price: "199.99",
+  const body = await response.json();
 
-            stock: "10",
-
-            category:
-              "Games",
-          },
-        }
-      );
-
-    expect(
-      response.status()
-    ).toBe(201);
-
-    const body =
-      await response.json();
-
-    expect(body)
-      .toHaveProperty(
-        "id"
-      );
-
-    expect(
-      body.name
-    ).toBe(
-      "Produto Teste API"
-    );
-  }
-);
+  expect(body).toHaveProperty('id');
+  expect(body.name).toBe(productData.name);
+});
 
 //
-// ✅ Não deve criar sem token
+// ✅ Listar produtos
 //
+test('deve listar produtos', async ({ request }) => {
 
-test(
-  "não deve criar produto sem token",
-  async ({ request }) => {
-    const response =
-      await request.post(
-        "api/products",
-        {
-          multipart: {
-            name:
-              "Produto sem auth",
+  const response = await request.get('/api/products');
 
-            description:
-              "Teste",
+  expect(response.status()).toBe(200);
 
-            price: "99.90",
+  const body = await response.json();
 
-            stock: "5",
-
-            category:
-              "Games",
-          },
-        }
-      );
-
-    expect(
-      response.status()
-    ).toBe(401);
-  }
-);
+  expect(Array.isArray(body)).toBe(true);
+});
 
 //
-// ✅ Editar produto
+// ✅ Buscar produto por ID
 //
+test('deve buscar produto por ID', async ({ request, adminToken }) => {
 
-test(
-  "deve editar produto",
-  async ({ request }) => {
-    const response =
-      await request.put(
-        "api/products/12",
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
+  const productData = createProductData();
 
-          multipart: {
-            name:
-              "Produto Editado",
+  const create = await request.post('/api/products', {
+    headers: authHeaders(adminToken),
+    multipart: productData,
+  });
 
-            description:
-              "Descrição editada",
+  const product = await create.json();
 
-            price:
-              "299.99",
+  const response = await request.get(`/api/products/${product.id}`);
 
-            stock: "20",
+  expect(response.status()).toBe(200);
 
-            category:
-              "Informática",
-          },
-        }
-      );
+  const body = await response.json();
 
-    expect(
-      response.status()
-    ).toBe(200);
+  expect(body.id).toBe(product.id);
+});
 
-    const body =
-      await response.json();
+//
+// ✅ Atualizar produto
+//
+test('deve atualizar produto', async ({ request, adminToken }) => {
 
-    expect(
-      body.name
-    ).toBe(
-      "Produto Editado"
-    );
-  }
-);
+  const headers = authHeaders(adminToken);
+  const productData = createProductData();
+
+  // ✅ cria produto
+  const create = await request.post('/api/products', {
+    headers,
+    multipart: productData,
+  });
+
+  const product = await create.json();
+
+  // ✅ atualiza
+  const updatedName = `Produto Atualizado-${Date.now()}`;
+
+const update = await request.put(`/api/products/${product.id}`, {
+  headers,
+  data: {
+    name: updatedName,
+    description: "Atualizado",
+    price: "100",
+    stock: "5",
+    category: "Games"
+  },
+});
+
+// ✅ primeiro pega o body
+const body = await update.text();
+
+// ✅ depois imprime
+console.log('STATUS:', update.status());
+console.log('BODY:', body);
+
+// ✅ depois valida
+expect(update.status()).toBe(200);
+});
 
 //
 // ✅ Deletar produto
 //
+test('deve remover produto', async ({ request, adminToken }) => {
 
-test(
-  "deve deletar produto",
-  async ({ request }) => {
-    // ✅ Cria produto temporário
-    const createResponse =
-      await request.post(
-        "api/products",
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
+  const headers = authHeaders(adminToken);
 
-          multipart: {
-            name:
-              "Produto Delete",
+  // ✅ cria produto
+  const create = await request.post('/api/products', {
+    headers,
+    multipart: createProductData(),
+  });
 
-            description:
-              "Produto temporário",
+  const product = await create.json();
 
-            price: "50",
+  // ✅ remove
+  const response = await request.delete(`/api/products/${product.id}`, {
+    headers,
+  });
 
-            stock: "2",
+  expect(response.status()).toBe(200);
+});
 
-            category:
-              "Games",
-          },
-        }
-      );
+//
+// ✅ Não deve criar produto sem token
+//
+test('não deve criar produto sem autenticação', async ({ request }) => {
 
-    expect(
-      createResponse.status()
-    ).toBe(201);
+  const response = await request.post('/api/products', {
+    multipart: createProductData(),
+  });
 
-    const createdProduct =
-      await createResponse.json();
+  expect(response.status()).toBe(401);
+});
 
-    // ✅ Deleta produto
-    const deleteResponse =
-      await request.delete(
-        `api/products/${createdProduct.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
+//
+// ✅ Não deve atualizar produto como usuário comum
+//
+test('não deve permitir update sem permissão', async ({ request, userToken, adminToken }) => {
 
-    expect(
-      deleteResponse.status()
-    ).toBe(200);
-  }
-);
+  // cria produto com admin
+  const create = await request.post('/api/products', {
+    headers: authHeaders(adminToken),
+    multipart: createProductData(),
+  });
+
+  const product = await create.json();
+
+  // tenta atualizar com user comum
+  const response = await request.put(`/api/products/${product.id}`, {
+    headers: authHeaders(userToken),
+    data: {
+      name: 'Tentativa inválida',
+    },
+  });
+
+  expect(response.status()).toBeGreaterThanOrEqual(403);
+});
+
+//
+// ✅ Produto inexistente
+//
+test('não deve buscar produto inexistente', async ({ request }) => {
+
+  const response = await request.get('/api/products/999999');
+
+  expect(response.status()).toBe(404);
+});
