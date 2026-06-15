@@ -1,36 +1,54 @@
 pipeline {
     agent any
 
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+    }
+
     stages {
 
+        // ✅ Instala dependências
         stage('Install Dependencies') {
             steps {
                 bat 'npm install'
             }
         }
 
-        stage('Install Playwright') {
+        // ✅ Playwright
+        stage('Install Playwright Browsers') {
             steps {
                 bat 'npx playwright install'
             }
         }
 
-        // ✅ SUBIR DOCKER
-        stage('Start Docker Environment') {
+        // ✅ Clonar backend (repo externo)
+        stage('Checkout Backend') {
             steps {
-                bat 'docker compose down'
-                bat 'docker compose up -d --build'
+                dir('backend') {
+                    git url: 'https://github.com/jeanmalagi/ecommerce-fullstack.git', branch: 'main'
+                }
             }
         }
 
-        // ✅ ESPERAR API SUBIR
+        // ✅ Subir Docker (usa docker-compose da raiz)
+        stage('Start Docker Environment') {
+            steps {
+                bat '''
+                cd backend
+                docker compose down || exit 0
+                docker compose up -d --build
+                '''
+            }
+        }
+
+        // ✅ Esperar API subir
         stage('Wait for API') {
             steps {
                 bat 'node wait-for-api.js'
             }
         }
 
-        // ✅ TESTES PARALELOS
+        // ✅ Testes paralelos
         stage('Run Tests (Parallel)') {
             parallel {
 
@@ -65,10 +83,18 @@ pipeline {
                         }
                     }
                 }
+
+                stage('Dashboard') {
+                    steps {
+                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                            bat 'npx playwright test tests/dashboard --reporter=line'
+                        }
+                    }
+                }
             }
         }
 
-        // ✅ RELATÓRIO FINAL
+        // ✅ Relatório HTML
         stage('Generate HTML Report') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
@@ -77,18 +103,31 @@ pipeline {
             }
         }
 
-        // ✅ ARQUIVAR RELATÓRIO
+        // ✅ Arquivar
         stage('Archive Report') {
             steps {
                 archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
             }
         }
 
-        // ✅ FINALIZAR DOCKER
+        // ✅ Derrubar Docker
         stage('Shutdown Environment') {
             steps {
-                bat 'docker compose down'
+                bat '''
+                cd backend
+                docker compose down
+                '''
             }
+        }
+    }
+
+    // ✅ Garantir limpeza sempre
+    post {
+        always {
+            bat '''
+            cd backend
+            docker compose down || exit 0
+            '''
         }
     }
 }
