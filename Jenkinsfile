@@ -7,21 +7,18 @@ pipeline {
 
     stages {
 
-        // ✅ Instalar dependências
         stage('Install Dependencies') {
             steps {
                 bat 'npm install'
             }
         }
 
-        // ✅ Playwright
         stage('Install Playwright Browsers') {
             steps {
                 bat 'npx playwright install'
             }
         }
 
-        // ✅ Checkout Backend
         stage('Checkout Backend') {
             steps {
                 dir('ecommerce-fullstack') {
@@ -30,25 +27,37 @@ pipeline {
             }
         }
 
+        // ✅ RESET COMPLETO DO BANCO (CRÍTICO)
         stage('Start Docker Environment') {
             steps {
                 bat '''
                 cd ecommerce-fullstack
 
-                docker compose down -v || exit 0   // 🔥 remove volumes (zera o banco)
-
+                docker compose down -v || exit 0
                 docker compose up -d --build
                 '''
             }
         }
 
-        // ✅ Esperar API subir
         stage('Wait for API') {
             steps {
-                bat 'node wait-for-api.js'
+                bat '''
+                echo Aguardando API...
+                timeout /t 10
+
+                curl http://localhost:3000/api/products
+
+                if %ERRORLEVEL% neq 0 (
+                    echo API nao respondeu
+                    exit /b 1
+                )
+
+                echo API pronta ✅
+                '''
             }
         }
 
+        // ✅ SEED (AGORA FUNCIONA)
         stage('Seed Database') {
             steps {
                 bat '''
@@ -65,24 +74,29 @@ pipeline {
                 -d "{\\"name\\":\\"User\\",\\"email\\":\\"cliente@email.com\\",\\"password\\":\\"123456\\"}"
                 '''
             }
-        }        
+        }
 
-        // ✅ Testes paralelos
         stage('Run Tests (Parallel)') {
             parallel {
 
                 stage('Auth') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/auth --reporter=line'
+                            bat '''
+                            set NO_COLOR=true
+                            npx playwright test tests/auth --reporter=line
+                            '''
                         }
                     }
                 }
 
-                /*stage('Products') {
+                stage('Products') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/products --reporter=line'
+                            bat '''
+                            set NO_COLOR=true
+                            npx playwright test tests/products --reporter=line
+                            '''
                         }
                     }
                 }
@@ -90,7 +104,10 @@ pipeline {
                 stage('Cart') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/cart --reporter=line'
+                            bat '''
+                            set NO_COLOR=true
+                            npx playwright test tests/cart --reporter=line
+                            '''
                         }
                     }
                 }
@@ -98,7 +115,10 @@ pipeline {
                 stage('Orders') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/orders --reporter=line'
+                            bat '''
+                            set NO_COLOR=true
+                            npx playwright test tests/orders --reporter=line
+                            '''
                         }
                     }
                 }
@@ -106,30 +126,28 @@ pipeline {
                 stage('Dashboard') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/dashboard --reporter=line'
+                            bat '''
+                            set NO_COLOR=true
+                            npx playwright test tests/dashboard --reporter=line
+                            '''
                         }
                     }
-                }*/
-            }
-        }
-
-        // ✅ Relatório HTML
-        stage('Generate HTML Report') {
-            steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    bat 'npx playwright test --reporter=html'
                 }
             }
         }
 
-       // ✅ Arquivar
+        stage('Generate HTML Report') {
+            steps {
+                bat 'npx playwright test --reporter=html'
+            }
+        }
+
         stage('Archive Report') {
             steps {
                 archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
             }
         }
 
-        // ✅ Derrubar Docker
         stage('Shutdown Environment') {
             steps {
                 bat '''
@@ -140,7 +158,6 @@ pipeline {
         }
     }
 
-    // ✅ Cleanup garantido
     post {
         always {
             bat '''
