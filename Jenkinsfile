@@ -79,7 +79,7 @@ pipeline {
                     }
                 }
 
-/*                stage('Products') {
+                /*stage('Products') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                             bat 'npx playwright test tests/products --reporter=line'
@@ -109,7 +109,7 @@ pipeline {
                             bat 'npx playwright test tests/dashboard --reporter=line'
                         }
                     }
-                }
+                }*/
             }
         }
 
@@ -127,7 +127,7 @@ pipeline {
             steps {
                 archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
             }
-        }*/
+        }
 
         // ✅ Derrubar Docker
         stage('Shutdown Environment') {
