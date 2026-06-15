@@ -54,19 +54,7 @@ pipeline {
         // ✅ Esperar API subir
         stage('Wait for API') {
             steps {
-                bat '''
-                echo Aguardando API...
-                timeout /t 10
-
-                curl http://localhost:3000/api/products
-
-                if %ERRORLEVEL% neq 0 (
-                    echo API nao respondeu
-                    exit /b 1
-                )
-
-                echo API pronta ✅
-                '''
+                bat 'node wait-for-api.js'
             }
         }
 
