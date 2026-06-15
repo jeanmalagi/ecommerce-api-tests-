@@ -43,16 +43,29 @@ pipeline {
             steps {
                 bat '''
                 echo Aguardando API...
-                timeout /t 10
 
-                curl http://localhost:3000/api/products
+                set RETRY=0
 
-                if %ERRORLEVEL% neq 0 (
-                    echo API nao respondeu
+                :loop
+                curl http://localhost:3000/api/products >nul 2>&1
+
+                if %ERRORLEVEL%==0 (
+                    echo API pronta ✅
+                    goto :end
+                )
+
+                echo Tentativa %RETRY%...
+                set /A RETRY+=1
+
+                if %RETRY% GEQ 15 (
+                    echo API nao subiu ❌
                     exit /b 1
                 )
 
-                echo API pronta ✅
+                ping 127.0.0.1 -n 4 >nul
+                goto loop
+
+                :end
                 '''
             }
         }
