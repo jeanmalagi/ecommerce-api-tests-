@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    options {
-        timeout(time: 20, unit: 'MINUTES')
-    }
-
     stages {
 
         stage('Install Dependencies') {
@@ -13,14 +9,20 @@ pipeline {
             }
         }
 
-        stage('Install Playwright Browsers') {
+        stage('Start Docker Environment') {
             steps {
-                bat 'npx playwright install'
+                bat 'docker-compose down || exit 0'
+                bat 'docker-compose up -d --build'
             }
         }
 
-        // ✅ Execução rápida paralela (sem gerar HTML aqui)
-        stage('API Tests (Parallel)') {
+        stage('Wait for API') {
+            steps {
+                bat 'node wait-for-api.js'
+            }
+        }
+
+        stage('Run Tests (Parallel)') {
             parallel {
 
                 stage('Auth') {
@@ -39,14 +41,6 @@ pipeline {
                     }
                 }
 
-                stage('Orders') {
-                    steps {
-                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/orders --reporter=line'
-                        }
-                    }
-                }
-
                 stage('Cart') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
@@ -55,17 +49,16 @@ pipeline {
                     }
                 }
 
-                stage('Dashboard') {
+                stage('Orders') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            bat 'npx playwright test tests/dashboard --reporter=line'
+                            bat 'npx playwright test tests/orders --reporter=line'
                         }
                     }
                 }
             }
         }
 
-        // ✅ GERA RELATÓRIO CORRETO (UMA VEZ SÓ)
         stage('Generate HTML Report') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
@@ -74,27 +67,16 @@ pipeline {
             }
         }
 
-        // ✅ Debug simples
-        stage('Debug Report') {
-            steps {
-                bat 'dir playwright-report'
-            }
-        }
-
-        stage('Zip Report') {
-            steps {
-                powershell '''
-                Compress-Archive -Path playwright-report\\* -DestinationPath playwright-report.zip -Force
-                '''
-            }
-        }        
-
-        // ✅ Arquivar (sem fingerprint → evita bug Windows)
         stage('Archive Report') {
             steps {
-                archiveArtifacts artifacts: 'playwright-report.zip', fingerprint: false
+                archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
             }
         }
 
+        stage('Shutdown Environment') {
+            steps {
+                bat 'docker-compose down'
+            }
+        }
     }
 }

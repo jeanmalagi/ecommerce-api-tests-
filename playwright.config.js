@@ -10,7 +10,7 @@ export default defineConfig({
   ],
 
   use: {
-    baseURL: 'http://localhost:3000/api',
+    baseURL: 'http://localhost:3000',
 
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
