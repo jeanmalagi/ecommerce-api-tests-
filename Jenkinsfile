@@ -7,30 +7,30 @@ pipeline {
 
     stages {
 
-        // ✅ Instala dependências
+        // ✅ Instalar dependências do projeto de testes
         stage('Install Dependencies') {
             steps {
                 bat 'npm install'
             }
         }
 
-        // ✅ Playwright
+        // ✅ Instalar navegadores do Playwright
         stage('Install Playwright Browsers') {
             steps {
                 bat 'npx playwright install'
             }
         }
 
-        // ✅ Clonar backend (repo externo)
+        // ✅ Clonar o backend (repo externo)
         stage('Checkout Backend') {
             steps {
-                dir('backend') {
+                dir('ecommerce-fullstack') {
                     git url: 'https://github.com/jeanmalagi/ecommerce-fullstack.git', branch: 'main'
                 }
             }
         }
 
-        // ✅ Subir Docker (usa docker-compose da raiz)
+        // ✅ Subir ambiente Docker (backend + banco)
         stage('Start Docker Environment') {
             steps {
                 bat '''
@@ -48,11 +48,11 @@ pipeline {
             }
         }
 
-        // ✅ Testes paralelos
+        // ✅ Executar testes em paralelo
         stage('Run Tests (Parallel)') {
             parallel {
 
-                stage('Auth') {
+                stage('Auth Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                             bat 'npx playwright test tests/auth --reporter=line'
@@ -60,7 +60,7 @@ pipeline {
                     }
                 }
 
-                stage('Products') {
+                stage('Products Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                             bat 'npx playwright test tests/products --reporter=line'
@@ -68,7 +68,7 @@ pipeline {
                     }
                 }
 
-                stage('Cart') {
+                stage('Cart Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                             bat 'npx playwright test tests/cart --reporter=line'
@@ -76,7 +76,7 @@ pipeline {
                     }
                 }
 
-                stage('Orders') {
+                stage('Orders Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                             bat 'npx playwright test tests/orders --reporter=line'
@@ -84,7 +84,7 @@ pipeline {
                     }
                 }
 
-                stage('Dashboard') {
+                stage('Dashboard Tests') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                             bat 'npx playwright test tests/dashboard --reporter=line'
@@ -94,7 +94,7 @@ pipeline {
             }
         }
 
-        // ✅ Relatório HTML
+        // ✅ Gerar relatório consolidado
         stage('Generate HTML Report') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
@@ -103,14 +103,21 @@ pipeline {
             }
         }
 
-        // ✅ Arquivar
+        // ✅ Debug (opcional)
+        stage('Debug Report') {
+            steps {
+                bat 'dir playwright-report'
+            }
+        }
+
+        // ✅ Arquivar relatório
         stage('Archive Report') {
             steps {
                 archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
             }
         }
 
-        // ✅ Derrubar Docker
+        // ✅ Derrubar ambiente Docker
         stage('Shutdown Environment') {
             steps {
                 bat '''
@@ -121,7 +128,7 @@ pipeline {
         }
     }
 
-    // ✅ Garantir limpeza sempre
+    // ✅ Garantir limpeza mesmo em falha
     post {
         always {
             bat '''
