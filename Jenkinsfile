@@ -42,6 +42,9 @@ pipeline {
         stage('Wait for API') {
             steps {
                 bat '''
+                @echo off
+                setlocal EnableDelayedExpansion
+
                 echo Aguardando API...
 
                 set RETRY=0
@@ -49,20 +52,20 @@ pipeline {
                 :loop
                 curl http://localhost:3000/api/products >nul 2>&1
 
-                if %ERRORLEVEL%==0 (
+                if !ERRORLEVEL!==0 (
                     echo API pronta ✅
-                    goto :end
+                    goto end
                 )
 
-                echo Tentativa %RETRY%...
+                echo Tentativa !RETRY!...
                 set /A RETRY+=1
 
-                if %RETRY% GEQ 15 (
+                if !RETRY! GEQ 20 (
                     echo API nao subiu ❌
                     exit /b 1
                 )
 
-                ping 127.0.0.1 -n 4 >nul
+                timeout /t 3 >nul
                 goto loop
 
                 :end
