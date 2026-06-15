@@ -1,4 +1,4 @@
-const url = 'http://localhost:3000/api/health';
+const url = 'http://localhost:3000/api/products';
 
 async function wait() {
   for (let i = 0; i < 15; i++) {
