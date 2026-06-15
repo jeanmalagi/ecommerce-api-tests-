@@ -1,21 +1,19 @@
 const url = 'http://localhost:3000/api/products';
 
 async function wait() {
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 30; i++) { // mais tempo
     try {
       const res = await fetch(url);
 
-      if (res.ok) {
+      if (res.status === 200) {
         console.log('✅ API pronta');
         process.exit(0);
       }
 
-      throw new Error('API não respondeu OK');
+    } catch (e) {}
 
-    } catch (e) {
-      console.log('⏳ Aguardando API...');
-      await new Promise(r => setTimeout(r, 2000));
-    }
+    console.log('⏳ Aguardando API...');
+    await new Promise(r => setTimeout(r, 3000));
   }
 
   console.error('❌ API não subiu');
