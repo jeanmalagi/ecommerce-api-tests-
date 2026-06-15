@@ -9,19 +9,28 @@ pipeline {
             }
         }
 
-        stage('Start Docker Environment') {
+        stage('Install Playwright') {
             steps {
-                bat 'docker-compose down || exit 0'
-                bat 'docker-compose up -d --build'
+                bat 'npx playwright install'
             }
         }
 
+        // ✅ SUBIR DOCKER
+        stage('Start Docker Environment') {
+            steps {
+                bat 'docker compose down'
+                bat 'docker compose up -d --build'
+            }
+        }
+
+        // ✅ ESPERAR API SUBIR
         stage('Wait for API') {
             steps {
                 bat 'node wait-for-api.js'
             }
         }
 
+        // ✅ TESTES PARALELOS
         stage('Run Tests (Parallel)') {
             parallel {
 
@@ -59,6 +68,7 @@ pipeline {
             }
         }
 
+        // ✅ RELATÓRIO FINAL
         stage('Generate HTML Report') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
@@ -67,15 +77,17 @@ pipeline {
             }
         }
 
+        // ✅ ARQUIVAR RELATÓRIO
         stage('Archive Report') {
             steps {
                 archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
             }
         }
 
+        // ✅ FINALIZAR DOCKER
         stage('Shutdown Environment') {
             steps {
-                bat 'docker-compose down'
+                bat 'docker compose down'
             }
         }
     }
