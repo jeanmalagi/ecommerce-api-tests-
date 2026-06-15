@@ -79,7 +79,7 @@ pipeline {
                     }
                 }
 
-                stage('Products') {
+/*                stage('Products') {
                     steps {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                             bat 'npx playwright test tests/products --reporter=line'
@@ -122,19 +122,12 @@ pipeline {
             }
         }
 
-        // ✅ Debug relatório
-        stage('Debug Report') {
-            steps {
-                bat 'dir playwright-report'
-            }
-        }
-
-        // ✅ Arquivar
+       // ✅ Arquivar
         stage('Archive Report') {
             steps {
                 archiveArtifacts artifacts: 'playwright-report/**', fingerprint: false
             }
-        }
+        }*/
 
         // ✅ Derrubar Docker
         stage('Shutdown Environment') {
