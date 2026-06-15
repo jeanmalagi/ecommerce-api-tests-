@@ -30,23 +30,14 @@ pipeline {
             }
         }
 
-        // ✅ Subir Docker
         stage('Start Docker Environment') {
             steps {
                 bat '''
                 cd ecommerce-fullstack
-                docker compose down || exit 0
-                docker compose up -d --build
-                '''
-            }
-        }
 
-        // ✅ 🔥 NOVO: Ver logs do backend
-        stage('Check Backend Logs') {
-            steps {
-                bat '''
-                cd ecommerce-fullstack
-                docker logs ecommerce-fullstack-backend-1
+                docker compose down -v || exit 0   // 🔥 remove volumes (zera o banco)
+
+                docker compose up -d --build
                 '''
             }
         }
@@ -57,6 +48,24 @@ pipeline {
                 bat 'node wait-for-api.js'
             }
         }
+
+        stage('Seed Database') {
+            steps {
+                bat '''
+                echo Criando usuario admin...
+
+                curl -X POST http://localhost:3000/api/users/login ^
+                -H "Content-Type: application/json" ^
+                -d "{\\"name\\":\\"Admin\\",\\"email\\":\\"admin@email.com\\",\\"password\\":\\"123456\\",\\"isAdmin\\":true}"
+
+                echo Criando usuario normal...
+
+                curl -X POST http://localhost:3000/api/users/login ^
+                -H "Content-Type: application/json" ^
+                -d "{\\"name\\":\\"User\\",\\"email\\":\\"cliente@email.com\\",\\"password\\":\\"123456\\"}"
+                '''
+            }
+        }        
 
         // ✅ Testes paralelos
         stage('Run Tests (Parallel)') {
