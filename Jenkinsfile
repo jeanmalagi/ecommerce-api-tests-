@@ -54,13 +54,13 @@ pipeline {
                 bat '''
                 echo Criando usuario admin...
 
-                curl -X POST http://localhost:3000/api/users/login ^
+                curl -X POST http://localhost:3000/api/users/register ^
                 -H "Content-Type: application/json" ^
                 -d "{\\"name\\":\\"Admin\\",\\"email\\":\\"admin@email.com\\",\\"password\\":\\"123456\\",\\"isAdmin\\":true}"
 
                 echo Criando usuario normal...
 
-                curl -X POST http://localhost:3000/api/users/login ^
+                curl -X POST http://localhost:3000/api/users/register ^
                 -H "Content-Type: application/json" ^
                 -d "{\\"name\\":\\"User\\",\\"email\\":\\"cliente@email.com\\",\\"password\\":\\"123456\\"}"
                 '''
