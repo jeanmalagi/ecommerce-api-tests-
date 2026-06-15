@@ -93,10 +93,6 @@ const update = await request.put(`/api/products/${product.id}`, {
 // ✅ primeiro pega o body
 const body = await update.text();
 
-// ✅ depois imprime
-console.log('STATUS:', update.status());
-console.log('BODY:', body);
-
 // ✅ depois valida
 expect(update.status()).toBe(200);
 });
