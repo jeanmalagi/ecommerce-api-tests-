@@ -34,7 +34,7 @@ pipeline {
         stage('Start Docker Environment') {
             steps {
                 bat '''
-                cd backend
+                cd ecommerce-fullstack
                 docker compose down || exit 0
                 docker compose up -d --build
                 '''
@@ -114,7 +114,7 @@ pipeline {
         stage('Shutdown Environment') {
             steps {
                 bat '''
-                cd backend
+                cd ecommerce-fullstack
                 docker compose down
                 '''
             }
@@ -125,7 +125,7 @@ pipeline {
     post {
         always {
             bat '''
-            cd backend
+            cd ecommerce-fullstack
             docker compose down || exit 0
             '''
         }
