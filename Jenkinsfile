@@ -168,7 +168,7 @@ pipeline {
             steps {
                 bat '''
                 cd ecommerce-fullstack
-                docker compose down
+                docker compose down || exit 0
                 '''
             }
         }
