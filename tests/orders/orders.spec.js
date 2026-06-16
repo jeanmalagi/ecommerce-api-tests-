@@ -1,56 +1,58 @@
-import { expect } from '@playwright/test';
 import { test } from '../../fixtures/auth.fixture.js';
+import { expect } from '@playwright/test';
 import { createProductData } from '../../factories/product.factory.js';
 import { authHeaders } from '../../utils/authHeaders.js';
 
 //
 // ✅ Criar pedido completo
 //
-test('deve criar pedido com item do carrinho', async ({ request, userToken, adminToken }) => {
 
-  // ✅ cria produto
-  const productData = createProductData();
+test('deve criar pedido com item do carrinho', async ({ request, userToken }) => {
 
+  // ✅ criar produto
   const productRes = await request.post('/api/products', {
-    headers: authHeaders(adminToken),
-    multipart: productData,
+    headers: {
+      Authorization: `Bearer ${userToken}`
+    },
+    data: {
+      name: `Produto-${Date.now()}`,
+      description: 'Produto teste',
+      price: '50.00',
+      stock: 10,
+      category: 'Games'
+    }
   });
 
   expect(productRes.status()).toBe(201);
 
   const product = await productRes.json();
 
-  // ✅ adiciona ao carrinho
+  // ✅ adicionar ao carrinho
   const cartRes = await request.post('/api/cart', {
-    headers: authHeaders(userToken),
+    headers: {
+      Authorization: `Bearer ${userToken}`
+    },
     data: {
       product_id: product.id,
-      quantity: 1,
-    },
+      quantity: 1
+    }
   });
 
   expect(cartRes.status()).toBe(201);
 
-  const cart = await cartRes.json();
-
-  // ✅ cria pedido
+  // ✅ criar pedido
   const orderRes = await request.post('/api/orders', {
-    headers: authHeaders(userToken),
-    data: {
-      items: [
-        {
-          product_id: product.id,
-          quantity: 1,
-        },
-      ],
-    },
+    headers: {
+      Authorization: `Bearer ${userToken}`
+    }
   });
 
   expect(orderRes.status()).toBe(201);
 
-  const order = await orderRes.json();
+  const body = await orderRes.json();
 
-  expect(order).toHaveProperty('id');
+  expect(body).toHaveProperty('order');
+  expect(body.order).toHaveProperty('id');
 });
 
 //
