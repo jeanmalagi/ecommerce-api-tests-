@@ -5,5 +5,6 @@ export function createProductData() {
     price: '50',
     stock: '10',
     category: 'Games',
+    image_url: '/uploads/default-product.svg',
   };
 }
